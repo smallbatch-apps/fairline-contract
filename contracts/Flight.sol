@@ -12,13 +12,16 @@ contract Flight is Ownable {
 
     Seat[] public seats;
 
+    enum FlightStatus { Presale, Sale, Closed, Landed, Finalised }
+    FlightStatus status;
+    
     struct Seat {
         string seatNumber;
         string description;
     }
 
     function Flight() {
-
+        status = FlightStatus.Presale;
     }
 
     function changeSeatCount(uint _seatCount) onlyOwner {
@@ -36,4 +39,27 @@ contract Flight is Ownable {
     function changeSeatPrice(uint _seatPrice) onlyOwner {
         seatPrice = _seatPrice;
     }
+
+    function enableFlight() onlyOwner onlyPresale {
+        require(seatCount > 0);
+        status = FlightStatus.Sale;
+    }
+
+    function getStatus() returns (FlightStatus) {
+        return status;
+    }
+
+    /**
+     * Modifiers
+     */
+
+     modifier onlyRegulator(){
+         require(msg.sender == regulator);
+         _;
+     }
+
+     modifier onlyPresale(){
+         require(status == FlightStatus.Presale);
+         _;
+     }
 }

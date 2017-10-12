@@ -65,23 +65,32 @@ contract('Flight', function(accounts) {
         let newPrice = 6;
         await flight.changeSeatPrice(newPrice);
         let seatPrice = await flight.seatPrice();
-        
+    
         assert.equal(seatPrice, newPrice, 'Seat price is not being correcly set');
     });
 
     xit('should not allow a flight to be enabled without a regulator', async function(){
         try {
-            await flight.addRegulator(regulator, {from: accounts[3]});
-            assert.fail('should have thrown before');
+            let enabled = await flight.enableFlight();
+            assert.fail('VM Exception while processing transaction: invalid opcode');
         } catch(error) {
             assertError(error);
         }
     });
 
-    xit('should not allow a flight with no seats to be enabled', async function(){
+    it('should not allow a non-owner to set a regulator', async function(){
+        try {
+            let enabled = await flight.addRegulator(regulator, {from: accounts[3]});
+            assert.fail('VM Exception while processing transaction: invalid opcode');
+        } catch(error) {
+            assertError(error);
+        }
+    });
+
+    it('should not allow a flight with no seats to be enabled', async function(){
         try {
             await flight.enableFlight();
-            assert.fail('should have thrown before');
+            assert.fail('VM Exception while processing transaction: invalid opcode');
         } catch(error) {
             assertError(error);
         }
