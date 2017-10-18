@@ -29,7 +29,7 @@ contract('Flight', function(accounts) {
 
     it('should allow an admin to set the number of seats', async function(){
         let newSeatCount = 200;
-        await flight.changeSeatCount(newSeatCount);
+        await flight.setSeatCount(newSeatCount);
         let seatCount = await flight.seatCount();
         assert.equal(newSeatCount, seatCount, 'Seat count is not being correcly set');
     });
@@ -63,13 +63,13 @@ contract('Flight', function(accounts) {
 
     it('should allow an admin to set the price', async function(){
         let newPrice = 6;
-        await flight.changeSeatPrice(newPrice);
+        await flight.setSeatPrice(newPrice);
         let seatPrice = await flight.seatPrice();
     
         assert.equal(seatPrice, newPrice, 'Seat price is not being correcly set');
     });
 
-    xit('should not allow a flight to be enabled without a regulator', async function(){
+    it('should not allow a flight to be enabled without a regulator', async function(){
         try {
             let enabled = await flight.enableFlight();
             assert.fail('VM Exception while processing transaction: invalid opcode');
@@ -89,23 +89,31 @@ contract('Flight', function(accounts) {
 
     it('should not allow a flight with no seats to be enabled', async function(){
         try {
-            await flight.enableFlight();
+            let enabled = await flight.enableFlight();
             assert.fail('VM Exception while processing transaction: invalid opcode');
         } catch(error) {
             assertError(error);
         }
     });
     
-    xit('should allow a flight to be enabled', async function(){
-        
+    it('should allow a flight to be enabled', async function(){
         await setup.regulator(flight, accounts);
         await setup.flightNumber(flight);
         await setup.seats(flight);
-        await flight.enableFlight();
 
-        let status = await flight.status();
-        
-        assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
+        let seat = await flight.seats(7);
+        console.log(seat);
+        let flightNumber = await flight.flightNumber();
+        console.log(flightNumber);
+        let regulator = await flight.regulator();
+        console.log(regulator);
+        let status = await flight.getStatus();
+        console.log(status);
+        let enabled = await flight.enableFlight();
+        console.log(enabled);
+
+        // let status = await flight.getStatus.call();
+        // assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
     });
 
     xit('should have the same number of seats as the declared seat count', async function(){
@@ -114,7 +122,7 @@ contract('Flight', function(accounts) {
         
         try {
             await flight.enableFlight();
-            assert.fail('should have thrown before');
+            assert.fail('VM Exception while processing transaction: invalid opcode');
         } catch(error) {
             assertError(error);
         }

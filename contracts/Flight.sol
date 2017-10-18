@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.17;
 
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
@@ -10,6 +10,8 @@ contract Flight is Ownable {
     uint public seatIndex;
     uint public seatPrice;
 
+    bytes32 public flightNumber;
+
     Seat[] public seats;
 
     enum FlightStatus { Presale, Sale, Closed, Landed, Finalised }
@@ -20,33 +22,40 @@ contract Flight is Ownable {
         string description;
     }
 
-    function Flight() {
+    function Flight() public {
         status = FlightStatus.Presale;
     }
 
-    function changeSeatCount(uint _seatCount) onlyOwner {
-        seatCount = _seatCount;
-    }
-
-    function addRegulator(address _regulator) onlyOwner {
+    function addRegulator(address _regulator) public onlyOwner {
         regulator = _regulator;
     }
 
-    function loadSeat(string _seatNumber, string _description) onlyOwner {
+    function loadSeat(string _seatNumber, string _description) public onlyOwner {
         seats.push(Seat(_seatNumber, _description));
     }
 
-    function changeSeatPrice(uint _seatPrice) onlyOwner {
+    function setSeatPrice(uint _seatPrice) public onlyOwner {
         seatPrice = _seatPrice;
     }
 
-    function enableFlight() onlyOwner onlyPresale {
+    function enableFlight() public onlyOwner onlyPresale {
         require(seatCount > 0);
+        require(seatCount == seats.length);
+        require(regulator != 0);
+        require(flightNumber != "");
         status = FlightStatus.Sale;
     }
 
-    function getStatus() returns (FlightStatus) {
+    function getStatus() public view returns (FlightStatus) {
         return status;
+    }
+
+    function setFlightNumber(bytes32 _flightNumber) public onlyOwner {
+       flightNumber = _flightNumber;
+    }
+
+    function setSeatCount(uint _seatCount) public onlyOwner {
+       seatCount = _seatCount;
     }
 
     /**

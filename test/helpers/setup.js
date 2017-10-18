@@ -1,37 +1,38 @@
-async function regulator(flight, accounts){
-    await flight.addRegulator(accounts[1]);
-    return flight;
-}
+module.exports = {
+    fullSetup: async function(flight, accounts){
+        await this.regulator(flight, accounts);
+        await this.seats(flight);
+        await this.flightNumber(flight);
+        //await flight.enableFlight(flight);
+    },
 
-async function seats(flight) {
-    await flight.loadSeat('1A', 'Window exit');
-    await flight.loadSeat('1B', 'Aisle exit');
-    await flight.loadSeat('1C', 'Aisle exit');
-    await flight.loadSeat('1D', 'Window exit');
-    await flight.loadSeat('2A', 'Window exit');
-    await flight.loadSeat('2B', 'Aisle exit');
-    await flight.loadSeat('2C', 'Aisle exit');
-    await flight.loadSeat('2D', 'Window exit');
+    regulator: async function(flight, accounts){
+        await flight.addRegulator(accounts[1]);
+        return flight;
+    },
 
-    await flight.setSeatCount(8);
-    
-    return flight;
-}
+    seats: async function(flight) {
+        await flight.loadSeat('1A', 'Window exit');
+        await flight.loadSeat('1B', 'Aisle exit');
+        await flight.loadSeat('1C', 'Aisle exit');
+        await flight.loadSeat('1D', 'Window exit');
+        await flight.loadSeat('2A', 'Window exit');
+        await flight.loadSeat('2B', 'Aisle exit');
+        await flight.loadSeat('2C', 'Aisle exit');
+        await flight.loadSeat('2D', 'Window exit');
 
-async function flightNumber(flight){
-    await flight.setFlightNumber('JQ570');
+        await flight.setSeatCount(8);
+        
+        return flight;
+    },
 
-    return flight;
-}
+    flightNumber: async function(flight){
+        await flight.setFlightNumber('JQ570');
+        return flight;
+    },
 
-async function setEnabled(flight) {
-    await flight.enableFlight();
-    return flight;
-}
-
-async function fullSetup(flight, accounts){
-    await regulator(flight, accounts);
-    await seats(flight);
-    await flightNumber(flight);
-    await enableFlight(flight);
+    setEnabled: async function(flight) {
+        await flight.enableFlight();
+        return flight;
+    },
 }
