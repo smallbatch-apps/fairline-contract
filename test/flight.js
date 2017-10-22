@@ -96,7 +96,7 @@ contract('Flight', function(accounts) {
         }
     });
     
-    it('should allow a flight to be enabled', async function(){
+    xit('should allow a flight to be enabled', async function(){
         await setup.regulator(flight, accounts);
         await setup.flightNumber(flight);
         await setup.seats(flight);
@@ -116,7 +116,7 @@ contract('Flight', function(accounts) {
         // assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
     });
 
-    xit('should have the same number of seats as the declared seat count', async function(){
+    it('should have the same number of seats as the declared seat count', async function(){
         await setup.fullSetup(flight, accounts);
         await flight.setSeatCount(5);
         
@@ -128,10 +128,10 @@ contract('Flight', function(accounts) {
         }
     });
 
-    xit('should not allow a flight to be closed prior to landing', async function(){
+    it('should not allow a flight to be finalised prior to landing', async function(){
         try {
-            await flight.enableFlight();
-            assert.fail('should have thrown before');
+            await flight.finaliseFlight();
+            assert.fail('VM Exception while processing transaction: invalid opcode');
         } catch(error) {
             assertError(error);
         }
@@ -144,7 +144,7 @@ contract('Flight', function(accounts) {
         setup.fullSetup();
         let tx = await flight.transfer(seatPrice, {from: customer});
         await flight.landedFlight();
-        await flight.closeFlight();
+        await flight.finaliseFlight();
         let finalBalance = await owner.balance();
 
         assertEqual(initalBalance + seatPrice, finalBalance, "Contract balance incompletely forwarded to owner");
