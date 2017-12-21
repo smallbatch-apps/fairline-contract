@@ -11,3 +11,4 @@ The second use-case is ticket transfer. In many cases, changing a booked flight 
 The flight contract is deployed by an owner, who is the administrator of the flight. They set the flight details, and then load the seat information.
 
 ## Customer
+The customer can book, purchase, transfer and cancel tickets.
