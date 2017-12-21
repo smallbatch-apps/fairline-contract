@@ -1,9 +1,14 @@
 module.exports = {
+    saleSetup: async function(flight, accounts){
+        await this.fullSetup(flight, accounts);
+        await this.setEnabled(flight);
+    },
+
     fullSetup: async function(flight, accounts){
         await this.regulator(flight, accounts);
         await this.seats(flight);
         await this.flightNumber(flight);
-        //await flight.enableFlight(flight);
+        await this.seatPrice(flight);
     },
 
     regulator: async function(flight, accounts){
@@ -28,6 +33,11 @@ module.exports = {
 
     flightNumber: async function(flight){
         await flight.setFlightNumber('JQ570');
+        return flight;
+    },
+
+    seatPrice: async function(flight){
+        await flight.setSeatPrice(5);
         return flight;
     },
 

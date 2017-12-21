@@ -16,9 +16,17 @@ contract('Flight', function(accounts) {
     const STATUS_CLOSED = 3;
 
     const FLIGHT_NUMBER = 'JQ570';
+
+    const SEAT_PRICE = 5;
+    const NUMBER_OF_SEATS = 2;
     
     beforeEach(async function() {
-        flight = await Flight.deployed();
+        return Flight.new()
+        .then(function(instance) {
+            flight = instance;
+        });
+
+        //flight = await Flight.deployed();
     });
 
     /**
@@ -36,7 +44,6 @@ contract('Flight', function(accounts) {
 
     it('should not have a regulator', async function(){
         let defaultRegulator = await flight.regulator();
-        let theOwner = await flight.owner();
         assert.equal(0, defaultRegulator, 'Regulator must not be set by default');
     });
 
@@ -96,24 +103,13 @@ contract('Flight', function(accounts) {
         }
     });
     
-    xit('should allow a flight to be enabled', async function(){
-        await setup.regulator(flight, accounts);
-        await setup.flightNumber(flight);
-        await setup.seats(flight);
-
-        let seat = await flight.seats(7);
-        console.log(seat);
-        let flightNumber = await flight.flightNumber();
-        console.log(flightNumber);
-        let regulator = await flight.regulator();
-        console.log(regulator);
+    it('should allow a flight to be enabled', async function(){
+        await setup.fullSetup(flight, accounts);
+        await flight.enableFlight();
+        
         let status = await flight.getStatus();
-        console.log(status);
-        let enabled = await flight.enableFlight();
-        console.log(enabled);
-
-        // let status = await flight.getStatus.call();
-        // assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
+        
+        assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
     });
 
     it('should have the same number of seats as the declared seat count', async function(){
@@ -129,6 +125,7 @@ contract('Flight', function(accounts) {
     });
 
     it('should not allow a flight to be finalised prior to landing', async function(){
+        await setup.fullSetup(flight, accounts);
         try {
             await flight.finaliseFlight();
             assert.fail('VM Exception while processing transaction: invalid opcode');
@@ -158,19 +155,79 @@ contract('Flight', function(accounts) {
      * and all functionality is a requirement.
      */
 
-    xit('should allow the purchase of a ticket', async function(){
+    it('should allow the purchase of a ticket', async function(){
+        await setup.fullSetup(flight, accounts);
+        //await flight.enableFlight();
+        
+        let tx = await flight.book(NUMBER_OF_SEATS, {from: customer, value: SEAT_PRICE * NUMBER_OF_SEATS});
+        
+        assert.isObject(tx);
+        assert.isObject(tx.receipt);
+        assert.property(tx.receipt, 'transactionHash');
+    });
+
+    it('must be the correct amount paid', async function(){
+        await setup.fullSetup(flight, accounts);
+        //await flight.enableFlight();
+        
+        try {
+            let tx = await flight.book(NUMBER_OF_SEATS, {from: customer, value: SEAT_PRICE});
+            assert.fail('VM Exception while processing transaction: invalid opcode');
+        } catch(error) {
+            assertError(error);
+        }
+    });
+
+    it('must not purchase zero seats', async function(){
+        await setup.fullSetup(flight, accounts);
+
+        try {
+            let tx = await flight.book(0, {from: customer, value: SEAT_PRICE});
+            assert.fail('VM Exception while processing transaction: invalid opcode');
+        } catch(error) {
+            assertError(error);
+        }
+    });
+
+    it('must not allow the purchase of more than one ticket from an address', async function(){
+        await setup.fullSetup(flight, accounts);
+        //await flight.enableFlight();
+        
+        let tx = await flight.book(NUMBER_OF_SEATS, {from: customer, value: SEAT_PRICE * NUMBER_OF_SEATS});
+        
+        assert.isObject(tx.receipt);
+        assert.property(tx.receipt, 'transactionHash');
+        try {
+            let tx = await flight.book(NUMBER_OF_SEATS, {from: customer, value: SEAT_PRICE * NUMBER_OF_SEATS});
+            assert.fail('VM Exception while processing transaction: invalid opcode');
+        } catch(error) {
+            assertError(error);
+        }
+    });
+
+    it('must purchase a normal seat if there are no skipped seats and a single seat is purchased', async function(){
+        await setup.fullSetup(flight, accounts);
+        let tx = await flight.book(1, {from: customer, value: SEAT_PRICE});
+        assert.isObject(tx.receipt);
+        assert.property(tx.receipt, 'transactionHash');
+    });
+
+    it('must allow owner to cancel their ticket', async function(){
+        await setup.fullSetup(flight, accounts);
+        let tx = await flight.book(1, {from: customer, value: SEAT_PRICE});
+        console.log(tx);
+        let ticket = await flight.getTicket({from: customer});
+        console.log(ticket);
+        //console.log(ticket);
+        //await flight.cancelTicket({from: customer});
+        //let skippedSeatCount = await flight.getSkippedSeatCount();
+        //console.log(skippedSeatCount);
 
     });
 
-    it('must be the correct amount paid');
-
-    it('must purchase one or more seat');
-
-    it('must purchase an "empty" seat if one is available and a single seat is purchased');
+    it('must purchase a "skipped" seat if one is available and a single seat is purchased');
 
     it('must remove the empty seat after purchase');
-
-    it('must not allow the purchase of more than one ticket from an address');
 
     it('must decline purchase of tickets if there are insufficient seats');
 
