@@ -7,7 +7,13 @@
     "test": "test"
   },
   "dependencies": {
-    "zeppelin-solidity": "^1.3.0"
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1",
+    "babel-preset-stage-3": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "lk-test-helpers": "^0.1.4",
+    "zeppelin-solidity": "^1.8.0"
   },
   "devDependencies": {},
   "scripts": {
