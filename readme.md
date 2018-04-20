@@ -33,13 +33,13 @@ Flight.enableFlight() will allow purchasing of tickets once the state is valid. 
 
 Flight status must be progressively set beyond that.  Statuses are as follows
 
-Presale - Setup state
-Sale - Available to purchase seats
-Closed - Can no longer purchase, less than 24 hrs to flight, etc
-Landed - Flight has finished 
-Finalised - Flight is done, but may have outstanding issues or questions.
-Concluded - Not a formal state, Flight.concludeFlight() executes the selfdestruct on the flight, sending the contract’s funds to the owner.
-Cancelled  - This flight will not operate. Any paid customer is able to request a refund which has no approval process. The contract is void and can not be acted on in any way.
+| Presale | Setup state |
+| Sale | Available to purchase seats |
+| Closed | Can no longer purchase, less than 24 hrs to flight, etc |
+| Landed | Flight has finished |
+| Finalised | Flight is done, but may have outstanding issues or questions.|
+| Concluded | Not a formal state, Flight.concludeFlight() executes the selfdestruct on the flight, sending the contract’s funds to the owner. |
+| Cancelled  | This flight will not operate. Any paid customer is able to request a refund which has no approval process. The contract is void and can not be acted on in any way. |
 
 Sale -> Closed -> Landed -> Finalised -> Concluded must be called explicitly and in that order.
 
@@ -49,10 +49,10 @@ The customer has three main actions. Book, transfer, and cancel. Booking require
 
 This means that in order to purchase a seat for themselves and a partner through the contract, a customer would have to:
 
-Get the current seat price
-Execute Flight.book(2) and pay (2 * seat price)
-Execute Flight.getOwnerSeats() and get the index of the second seat
-Execute Flight.transferSeat(secondSeatId, partnerAddress)
+1. Get the current seat price
+1. Execute Flight.book(2) and pay (2 * seat price)
+1. Execute Flight.getOwnerSeats() and get the index of the second seat
+1. Execute Flight.transferSeat(secondSeatId, partnerAddress)
 
 In practice, all the above would be done through a dApp, which makes use of eventing to facilitate the workflow.
 
