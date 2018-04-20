@@ -33,7 +33,7 @@ To use this setup, you need to install Truffle and Ganache locally. Truffle is a
 * Updated Webpack and Truffle to allow direct importing from node_modules files, allowing direct importing of OpenZeppelin helper methods.
 * Creation of an [EventLog debugging](https://github.com/smallbatch-apps/fairline-contract/blob/master/test/helpers/DebugEvents.js) class. This greatly facilitates introspection of the contract state. This is going to be refactored and extracted as an NPM package.
 * Contract implements a great degree of Solidity's functionality, and is a test-case for Ethereum's use as an platform for applications well beyond ICOs.
-* Unit test suite provides a comprehensive approach to application testing with the Ethereum blockchain in Truffle with Web3, alongside Ganache
+* Unit test suite provides a comprehensive approach to application testing with the Ethereum blockchain in Truffle with Web3, alongside Ganache. Use of modern asynchronous JS `await` keyword makes for vastly more readable markup than the common practise. Use of external OpenZeppelin helpers also makes for extremely clear testing of error conditions - a non-trivial factor in Solidity contract testing.
 
 # Usage
 
