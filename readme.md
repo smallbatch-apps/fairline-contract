@@ -12,7 +12,28 @@ The second use-case is ticket transfer. In many cases, changing a booked flight 
 
 ## Technology
 
+This Smart Contract is intended to run on the Ethereum Blockchain. It is written in the Solidity programming language in the [Truffle test framework](http://truffleframework.com/).
 
+It features extensive unit testing running in Truffle's JavaScript-based testing system and is intended to be paired with a distributed app, aka ÐApp, aka dApp. This dApp is in early development.
+
+### Local Usage
+
+To use this setup, you need to install Truffle and Ganache locally. Truffle is a test and scaffolding framework, and Ganache is a related Ethereum VM for testing purposes. Together with an IDE they provide a fast and effective way to build a Solidity development environment. The below instructions assume you have the appropriate tools in NodeJS and NPM.
+
+1. Install Truffle globally: `npm install -g truffle`
+2. Download and install Ganache from here: http://truffleframework.com/ganache/
+3. Clone this project into a new directory
+4. Navigate to the project and run `npm install`
+5. Open the project in your IDE. I recommend [Visual Studio Code](https://code.visualstudio.com/) with the [Solidity plugin](https://github.com/juanfranblanco/vscode-solidity).
+6. You can execute deployment and any tests with `truffle test` in the root directory of the project.
+
+### Technology Highlights
+
+* Updated Truffle setup to allow ES6 imports in tests. This allows more modern Class syntax in modules. Also allows use of cutting edge JS features such as async functions, `string.includes`, `...variable`, dereferencing, `Object.entries`, etc 
+* Updated Webpack and Truffle to allow direct importing from node_modules files, allowing direct importing of OpenZeppelin helper methods.
+* Creation of an [EventLog debugging](https://github.com/smallbatch-apps/fairline-contract/blob/master/test/helpers/DebugEvents.js) class. This greatly facilitates introspection of the contract state. This is going to be refactored and extracted as an NPM package.
+* Contract implements a great degree of Solidity's functionality, and is a test-case for Ethereum's use as an platform for applications well beyond ICOs.
+* Unit test suite provides a comprehensive approach to application testing with the Ethereum blockchain in Truffle with Web3, alongside Ganache
 
 # Usage
 
@@ -33,6 +54,8 @@ Flight.enableFlight() will allow purchasing of tickets once the state is valid. 
 
 Flight status must be progressively set beyond that.  Statuses are as follows
 
+| State | Description |
+| --- | --- |
 | Presale | Setup state |
 | Sale | Available to purchase seats |
 | Closed | Can no longer purchase, less than 24 hrs to flight, etc |
