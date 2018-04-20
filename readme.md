@@ -64,7 +64,7 @@ Flight status must be progressively set beyond that.  Statuses are as follows
 | Concluded | Not a formal state, Flight.concludeFlight() executes the selfdestruct on the flight, sending the contract’s funds to the owner. |
 | Cancelled  | This flight will not operate. Any paid customer is able to request a refund which has no approval process. The contract is void and can not be acted on in any way. |
 
-Sale -> Closed -> Landed -> Finalised -> Concluded must be called explicitly and in that order.
+Sale → Closed → Landed → Finalised → Concluded must be called explicitly and in that order.
 
 ## Customer
 
