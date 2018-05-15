@@ -1,7 +1,8 @@
 {
   "name": "truffle-airline",
   "version": "1.0.0",
-  "description": "Demo project to book airline flights",
+  "description": "Demo contract to book airline flights",
+  "repository": "https://github.com/smallbatch-apps/fairline-contract",
   "main": "truffle.js",
   "directories": {
     "test": "test"
@@ -12,13 +13,14 @@
     "babel-preset-stage-2": "^6.24.1",
     "babel-preset-stage-3": "^6.24.1",
     "babel-register": "^6.26.0",
+    "contract-events": "^1.0.1n",
     "lk-test-helpers": "^0.1.4",
-    "zeppelin-solidity": "^1.8.0"
+    "zeppelin-solidity": "^1.9.0"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "truffle test"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "Matt Burgess <matt@smallbatch.io>",
+  "license": "MIT"
 }

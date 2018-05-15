@@ -1,6 +1,6 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.23;
 
-import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import "../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Flight is Ownable {
 
@@ -42,7 +42,7 @@ contract Flight is Ownable {
     enum FlightStatus { Presale, Sale, Closed, Landed, Finalised, Cancelled }
     FlightStatus status;
 
-    function Flight() public {
+    constructor() public {
         status = FlightStatus.Presale;
     }
 
@@ -71,7 +71,7 @@ contract Flight is Ownable {
     }
 
     function transferSeat(uint _seatIndex, address _transferTo) public hasTicket {
-        require(seats[_seatIndex].owner == msg.sender);
+        require(seats[_seatIndex].owner == msg.sender, "You are not the owner of this seat");
         seats[_seatIndex].passenger = _transferTo;
         passengerSeat[_transferTo] = _seatIndex;
 
@@ -117,8 +117,8 @@ contract Flight is Ownable {
      */
 
     function book(uint numberOfSeats) public payable onlySale {
-        require(msg.value > 0);
-        require(msg.value == seatPrice * numberOfSeats);
+        require(msg.value > 0, "Value must be greater than zero");
+        require(msg.value == seatPrice * numberOfSeats, "Value must be the number of seats multiplied by the current price");
         require(numberOfSeats <= seatsRemaining);
 
         if (numberOfSeats == 1 && skippedSeats.length == 0) {
@@ -192,7 +192,7 @@ contract Flight is Ownable {
     }
 
     function cancelSeat(uint _seatIndex) public {
-        require(seats[_seatIndex].owner == msg.sender);
+        require(seats[_seatIndex].owner == msg.sender, "This seat does not belong to this user");
         
         if (seats[_seatIndex].passenger == msg.sender) {
             delete passengerSeat[msg.sender];
@@ -251,42 +251,42 @@ contract Flight is Ownable {
      */
 
     modifier onlyRegulator(){
-        require(msg.sender == regulator);
+        require(msg.sender == regulator, "Sender must be a regulator");
         _;
     }
 
     modifier onlyPresale(){
-        require(status == FlightStatus.Presale);
+        require(status == FlightStatus.Presale, "Flight must be in Presale status");
         _;
     }
 
     modifier onlySale(){
-        require(status == FlightStatus.Sale);
+        require(status == FlightStatus.Sale, "Flight must be in Sale status");
         _;
     }
 
     modifier onlyClosed(){
-        require(status == FlightStatus.Closed);
+        require(status == FlightStatus.Closed, "Flight must be in Closed status");
         _;
     }
 
     modifier onlyLanded(){
-        require(status == FlightStatus.Landed);
+        require(status == FlightStatus.Landed, "Flight must be in Landed status");
         _;
     }
 
     modifier onlyFinalised(){
-        require(status == FlightStatus.Finalised);
+        require(status == FlightStatus.Finalised, "Flight must be in Finalised status");
         _;
     }
 
     modifier onlyCancelled(){
-        require(status == FlightStatus.Cancelled);
+        require(status == FlightStatus.Cancelled, "Flight must be in Cancelled status");
         _;
     }
 
     modifier hasTicket(){
-        require(ownerSeats[msg.sender].length > 0);
+        require(ownerSeats[msg.sender].length > 0, "Sender must have seats on this flight");
         _;
     }
 }

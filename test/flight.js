@@ -1,9 +1,9 @@
-const assertError = require('./helpers/AssertError');
 const Flight = artifacts.require("./Flight.sol");
 
 import expectThrow from 'zeppelin-solidity/test/helpers/expectThrow';
+import decodeLogs from 'zeppelin-solidity/test/helpers/decodeLogs';
 import SetupHelper from './helpers/SetupHelper';
-import DebugEvents from './helpers/DebugEvents';
+import DebugEvents from 'contract-events';
 
 let debugEvents = new DebugEvents(Flight);
 
@@ -29,8 +29,6 @@ contract('Flight', function(accounts) {
     let setup;
 
     const FLIGHT_NUMBER = 'JQ570';
-
-    //const SEAT_PRICE = 3743820;
     const SEAT_PRICE = 5;
     const NUMBER_OF_SEATS = 2;
     
@@ -68,7 +66,7 @@ contract('Flight', function(accounts) {
         
         let [index, uuid, owner, passenger, price] = await flight.getSeatByIndex(checkInteger);
         
-        assert.equal(SEAT_UUIDS[checkInteger], debugEvents.cleanValue(uuid), 'Seat is not correctly stored');
+        assert.equal(SEAT_UUIDS[checkInteger], debugEvents.cleanString(uuid), 'Seat is not correctly stored');
     });
 
     it('should not have a regulator', async function(){
@@ -141,15 +139,13 @@ contract('Flight', function(accounts) {
 
         await flight.book(NUMBER_OF_SEATS, {from: customer, value: SEAT_PRICE * NUMBER_OF_SEATS});
         let tx = await flight.book(NUMBER_OF_SEATS, {from: customer2, value: SEAT_PRICE * NUMBER_OF_SEATS});
-        
-        let event = debugEvents.getEvents(tx, 'SeatBooked')[0];
-        
+        let event = debugEvents.setTx(tx).getEvent('SeatBooked');
         let [index, uuid, owner, passenger, price] = await flight.getSeatByUuid(event.uuid);
         
-        assert.equal(debugEvents.cleanValue(uuid), 'fc4f2cfa', 'ticket is from the wrong index');
+        assert.equal(debugEvents.cleanString(uuid), 'fc4f2cfa', 'ticket is from the wrong index');
         assert.equal(owner, customer2, 'owner address should be ' + customer2);
         assert.equal(passenger, customer2, 'passenger address should be ' + customer2);
-        assert.equal(debugEvents.cleanValue(price, 'uint'), 5, 'Price should be 5');
+        assert.equal(debugEvents.cleanUint(price), 5, 'Price should be 5');
     });
 
     it('must be the correct amount paid', async function(){
@@ -167,21 +163,21 @@ contract('Flight', function(accounts) {
         
         let tx = await flight.book(1, {from: customer, value: SEAT_PRICE});
 
-        let event = debugEvents.getEvents(tx, 'SeatBooked')[0];
+        let event = debugEvents.setTx(tx).getEvent('SeatBooked');
         let [index, uuid, owner, passenger, price] = await flight.getSeatByUuid(event.uuid);
 
         tx = await flight.cancelSeat(index, {from: customer});
-        event = debugEvents.getEvents(tx, 'SeatCancelled')[0];
+        event = debugEvents.setTx(tx).getEvent('SeatCancelled');
 
         [index, uuid, owner, passenger, price] = await flight.getSeatByUuid(event.uuid);
         
         let skippedSeatCount = await flight.getSkippedSeatCount();
         
-        assert.equal(debugEvents.cleanValue(uuid), SEAT_UUIDS[0], 'Seat UUID should not change on cancellation');
+        assert.equal(debugEvents.cleanString(uuid), SEAT_UUIDS[0], 'Seat UUID should not change on cancellation');
         assert.equal(owner, 0, 'Owner should be blank after cancellation');
         assert.equal(passenger, 0, 'Passenger should be blank after cancellation');
-        assert.equal(debugEvents.cleanValue(price, 'uint'), 0, 'Price should be 0 after cancellation');
-        assert.equal(debugEvents.cleanValue(skippedSeatCount, 'uint'), 1, 'There should be one skipped seat');
+        assert.equal(debugEvents.cleanUint(price), 0, 'Price should be 0 after cancellation');
+        assert.equal(debugEvents.cleanUint(skippedSeatCount), 1, 'There should be one skipped seat');
     });
 
     it('must purchase a "skipped" seat if one is available and a single seat is purchased', async function(){
@@ -198,8 +194,8 @@ contract('Flight', function(accounts) {
 
         assert.equal(owner, accounts[6], 'Owner should be new purchaser');
         assert.equal(passenger, accounts[6], 'Passenger should be new purchaser');
-        assert.equal(debugEvents.cleanValue(price, 'uint'), 5, 'Price should be 0 after cancellation');
-        assert.equal(debugEvents.cleanValue(skippedSeatCount, 'uint'), 0, 'There should be no skipped seats');
+        assert.equal(debugEvents.cleanUint(price), 5, 'Price should be 0 after cancellation');
+        assert.equal(debugEvents.cleanUint(skippedSeatCount), 0, 'There should be no skipped seats');
     });
     
     it('must allow purchase of tickets of multiple seats', async function(){
@@ -208,11 +204,11 @@ contract('Flight', function(accounts) {
         await flight.book(1, {from: customer2, value: SEAT_PRICE});
         const numberOfSeats = 3;
         const tx = await flight.book(numberOfSeats, {from: customer, value: SEAT_PRICE * numberOfSeats});
-        const events = debugEvents.getEvents(tx, 'SeatBooked');
+        const events = debugEvents.setTx(tx).getEvents('SeatBooked');
         const ownerSeats = await flight.getOwnerSeats({from: customer});
         assert.equal(events.length, numberOfSeats, `Seat Booking event did not fire ${numberOfSeats} times`);
         assert.equal(ownerSeats.length, numberOfSeats, `CustomerSeats array does not contain ${numberOfSeats} elements`);
-        assert.equal(debugEvents.cleanValue(ownerSeats[0], 'uint'), 2, 'Index of purchased seat should be 2');
+        assert.equal(debugEvents.cleanUint(ownerSeats[0]), 2, 'Index of purchased seat should be 2');
     });
 
     it('must decline purchase of tickets if there are insufficient seats', async function(){
@@ -226,7 +222,7 @@ contract('Flight', function(accounts) {
         await flight.book(2, {from: customer, value: SEAT_PRICE * 2});
         const ownerSeats = await flight.getOwnerSeats({from: customer});
         
-        const seatIndex = debugEvents.cleanValue(ownerSeats[1], 'uint');
+        const seatIndex = debugEvents.cleanUint(ownerSeats[1]);
         
         await flight.transferSeat(seatIndex, customer2, {from: customer});
 
@@ -241,7 +237,7 @@ contract('Flight', function(accounts) {
         await flight.book(2, {from: customer, value: SEAT_PRICE * 2});
         const ownerSeats = await flight.getOwnerSeats({from: customer});
         
-        const seatIndex = debugEvents.cleanValue(ownerSeats[1], 'uint');
+        const seatIndex = debugEvents.cleanUint(ownerSeats[1]);
         
         expectThrow(flight.transferSeat(seatIndex, customer2, {from: customer2}));
     });
@@ -252,10 +248,10 @@ contract('Flight', function(accounts) {
 
         let [index, uuid, owner, passenger, price] = await flight.getPassengerSeat({from: customer});
 
-        assert.equal(debugEvents.cleanValue(uuid), SEAT_UUIDS[0], 'is not correct');
+        assert.equal(debugEvents.cleanString(uuid), SEAT_UUIDS[0], 'is not correct');
         assert.equal(owner, customer, 'Owner should be customer');
         assert.equal(passenger, customer, 'Passenger should be customer');
-        assert.equal(debugEvents.cleanValue(price, 'uint'), 5, `Price should be ${SEAT_PRICE}`);
+        assert.equal(debugEvents.cleanUint(price), 5, `Price should be ${SEAT_PRICE}`);
     });
 
     it('must allow a non-owner passenger to get their seat details', async function() {
@@ -263,16 +259,16 @@ contract('Flight', function(accounts) {
         await flight.book(2, {from: customer, value: SEAT_PRICE * 2});
         const ownerSeats = await flight.getOwnerSeats({from: customer});
         
-        const seatIndex = debugEvents.cleanValue(ownerSeats[1], 'uint');
+        const seatIndex = debugEvents.cleanUint(ownerSeats[1]);
         
         await flight.transferSeat(seatIndex, customer2, {from: customer});
 
         let [index, uuid, owner, passenger, price] = await flight.getPassengerSeat({from: customer2});
 
-        assert.equal(debugEvents.cleanValue(uuid), SEAT_UUIDS[1], 'is not correct');
+        assert.equal(debugEvents.cleanString(uuid), SEAT_UUIDS[1], 'is not correct');
         assert.equal(owner, customer, 'Owner should be customer');
         assert.equal(passenger, customer2, 'Passenger should be customer2');
-        assert.equal(debugEvents.cleanValue(price, 'uint'), 5, `Price should be ${SEAT_PRICE}`);
+        assert.equal(debugEvents.cleanUint(price), 5, `Price should be ${SEAT_PRICE}`);
     });
 
     it('must allow an owner to confirm flight arrival', async function(){
@@ -280,10 +276,10 @@ contract('Flight', function(accounts) {
         await flight.closeFlight();
         await flight.landFlight();
         const status = await flight.getStatus();
-        assert.equal(debugEvents.cleanValue(status, 'uint'), 3, 'Status is not Landed');
+        assert.equal(debugEvents.cleanUint(status), 3, 'Status is not Landed');
     });
 
-    it('must allow refunds on flight cancellation', async function(){
+    xit('must allow refunds on flight cancellation', async function(){
         await setup.saleSetup();
         await flight.book(1, {from: customer, value: SEAT_PRICE});
         await flight.closeFlight();
@@ -293,7 +289,7 @@ contract('Flight', function(accounts) {
 
         let tx = await flight.requestRefund({from: customer});
 
-        let event = debugEvents.getEvents(tx, 'RefundSent');
+        let event = debugEvents.setTx(tx).getEvents('RefundSent');
 
         assert.equal(event.length, 1, 'Refund was sent');
     });
@@ -339,7 +335,7 @@ contract('Flight', function(accounts) {
         await flight.finaliseFlight();
 
         let tx = await flight.concludeFlight();
-        let events = debugEvents.getEvents(tx, 'FlightConcluded');
+        let events = debugEvents.setTx(tx).getEvents('FlightConcluded');
 
         assert.equal(events.length, 1, 'FlightConcluded event should have been executed');
     });
