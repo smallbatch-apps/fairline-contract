@@ -1,6 +1,6 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
-import "../node_modules/zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./Ownable.sol";
 
 contract Flight is Ownable {
 
@@ -24,11 +24,16 @@ contract Flight is Ownable {
     uint public seatPrice;
 
     bytes32 public flightId;
-    
+
     struct Seat {
         bytes32 uuid;
         address owner;
         address passenger;
+        uint price;
+    }
+
+    struct Rarity {
+        address starter;
         uint price;
     }
 
@@ -55,9 +60,9 @@ contract Flight is Ownable {
     }
 
     function enableFlight() public onlyOwner {
-        require(seatCount > 0);
-        require(regulator != 0);
-        require(flightId != "");
+        require(seatCount > 0, "Flight must have seats");
+        require(regulator != 0, "Flight must have a regulator");
+        require(flightId != "", "Flight must have an ID");
         status = FlightStatus.Sale;
         emit FlightEnabled(flightId);
     }
@@ -92,8 +97,7 @@ contract Flight is Ownable {
     }
 
     function cancelFlight() public onlyOwner onlyFinalised {
-        status = FlightStatus.Landed;
-        emit FlightLanded(flightId);
+        status = FlightStatus.Cancelled;
     }
 
     function getStatus() public view returns(FlightStatus) {
@@ -111,15 +115,16 @@ contract Flight is Ownable {
     function setRemainingSeats(uint _seatsRemaining) public onlyOwner {
         seatsRemaining = _seatsRemaining;
     }
-    
+
     /**
      * Passenger Actions
      */
 
     function book(uint numberOfSeats) public payable onlySale {
-        require(msg.value > 0, "Value must be greater than zero");
+        require(msg.value > 0, "Price must be greater than zero");
+        require(numberOfSeats > 0, "Number of seats cannot be zero");
         require(msg.value == seatPrice * numberOfSeats, "Value must be the number of seats multiplied by the current price");
-        require(numberOfSeats <= seatsRemaining);
+        require(numberOfSeats <= seatsRemaining, "There are not enough seats to make this booking");
 
         if (numberOfSeats == 1 && skippedSeats.length == 0) {
             bookOneSeat();
@@ -136,19 +141,19 @@ contract Flight is Ownable {
         return seats.length-1;
     }
 
-    function getSeatByIndex(uint _index) 
-        public 
-        view 
-        returns(uint, bytes32, address, address, uint) 
+    function getSeatByIndex(uint _index)
+        public
+        view
+        returns(uint, bytes32, address, address, uint)
     {
         Seat storage searchSeat = seats[_index];
         return (_index, searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
     }
 
-    function getSeatByUuid(bytes32 _uuid) 
-        public 
-        view 
-        returns(uint, bytes32, address, address, uint) 
+    function getSeatByUuid(bytes32 _uuid)
+        public
+        view
+        returns(uint, bytes32, address, address, uint)
     {
         Seat storage searchSeat = seats[seatIndexFromUuid[_uuid]];
         return (seatIndexFromUuid[_uuid], _uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
@@ -158,17 +163,17 @@ contract Flight is Ownable {
         Seat storage searchSeat = seats[passengerSeat[msg.sender]];
         return (passengerSeat[msg.sender], searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
     }
-    
+
     function bookOneSeat() private {
         ownerSeats[msg.sender].push(seatPurchaseIndex);
         passengerSeat[msg.sender] = seatPurchaseIndex;
-        
+
         seats[seatPurchaseIndex].owner = msg.sender;
         seats[seatPurchaseIndex].passenger = msg.sender;
         seats[seatPurchaseIndex].price = seatPrice;
 
         emit SeatBooked(flightId, seats[seatPurchaseIndex].owner, seats[seatPurchaseIndex].uuid);
-        
+
         seatPurchaseIndex++;
         seatsRemaining--;
     }
@@ -183,7 +188,7 @@ contract Flight is Ownable {
 
         ownerSeats[msg.sender].push(skippedSeatIndex);
         passengerSeat[msg.sender] = skippedSeatIndex;
-        
+
         seats[skippedSeatIndex].owner = msg.sender;
         seats[skippedSeatIndex].passenger = msg.sender;
         seats[skippedSeatIndex].price = seatPrice;
@@ -193,29 +198,29 @@ contract Flight is Ownable {
 
     function cancelSeat(uint _seatIndex) public {
         require(seats[_seatIndex].owner == msg.sender, "This seat does not belong to this user");
-        
+
         if (seats[_seatIndex].passenger == msg.sender) {
             delete passengerSeat[msg.sender];
         }
-        
+
         for (uint i = 0; i < ownerSeats[msg.sender].length-1; i++) {
             if (_seatIndex == ownerSeats[msg.sender][i]) {
                 delete ownerSeats[msg.sender][i];
                 ownerSeats[msg.sender][i] = ownerSeats[msg.sender][ownerSeats[msg.sender].length-1];
             }
         }
-        
+
         ownerSeats[msg.sender].length--;
         skippedSeats.push(_seatIndex);
 
         msg.sender.transfer(seats[_seatIndex].price);
-        
+
         seats[_seatIndex].owner = address(0);
         seats[_seatIndex].passenger = address(0);
         seats[_seatIndex].price = 0;
 
         seatsRemaining++;
-        
+
         emit SeatCancelled(flightId, seats[_seatIndex].uuid);
     }
 
@@ -229,7 +234,7 @@ contract Flight is Ownable {
         return skippedSeats.length;
     }
 
-    function requestRefund() public hasTicket {
+    function requestRefund() public hasTicket onlyCancelled {
         uint totalRefund = 0;
         for(uint i; i < ownerSeats[msg.sender].length; i++){
             totalRefund += ownerSeats[msg.sender][i];
@@ -242,8 +247,8 @@ contract Flight is Ownable {
     }
 
     function concludeFlight() public onlyOwner {
-        emit FlightConcluded(flightId, owner, address(this).balance);
-        selfdestruct(owner);
+        emit FlightConcluded(flightId, owner(), address(this).balance);
+        selfdestruct(owner());
     }
 
     /**

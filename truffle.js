@@ -1,8 +1,3 @@
-require('babel-register')({
-  ignore: /node_modules\/(?!zeppelin-solidity|contract-events)/
-});
-require('babel-polyfill');
-
 module.exports = {
   networks: {
     development: {

@@ -1,4 +1,4 @@
-export default class SetupHelper {
+class SetupHelper {
 
     constructor(flight, accounts){
         this.flight = flight;
@@ -27,21 +27,22 @@ export default class SetupHelper {
         await this.flight.addRegulator(this.accounts[1]);
     }
 
-    async seats(flight) {
+    async seats() {
         const numberOfSeats = 8;
         await this.flight.setSeatCount(numberOfSeats);
         await this.flight.setRemainingSeats(numberOfSeats);
-        const randoms = [
-            'fc4f2908', 'fc4f2ba6', 'fc4f2cfa', 'fc4f3100',
-            'fc4f327c', 'fc4f33a8', 'fc4f34c0', 'fc4f35e2'
-        ];
-        for(let i = 0; i < numberOfSeats; i++){
-            await this.flight.loadSeat(randoms[i]);
-        }
+
+        [
+          'fc4f2908', 'fc4f2ba6', 'fc4f2cfa', 'fc4f3100',
+          'fc4f327c', 'fc4f33a8', 'fc4f34c0', 'fc4f35e2'
+        ].forEach(
+          async seatNumber => { await this.flight.loadSeat(web3.utils.asciiToHex(seatNumber)) }
+        );
+
     }
 
     async flightId(){
-        await this.flight.setFlightId('JQ570');
+        await this.flight.setFlightId(web3.utils.asciiToHex('JQ570'));
     }
 
     async seatPrice(){
@@ -51,4 +52,6 @@ export default class SetupHelper {
     async setEnabled() {
         await this.flight.enableFlight();
     }
-}
+  }
+
+  module.exports = SetupHelper;
