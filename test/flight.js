@@ -2,9 +2,22 @@ const Flight = artifacts.require("./Flight.sol");
 
 let SetupHelper = require('./helpers/SetupHelper');
 let DebugEvents = require('./helpers/DebugEvents');
+
+let ContractWrapper = require('./helpers/ContractWrapper');
+
+let flightContract = new ContractWrapper(Flight);
+
+//let flightContract = new ContractWrapper(Flight);
+
+
 let debugEvents = new DebugEvents(Flight);
 
-contract('Flight', function (accounts) {
+// console.log(Object.keys(Flight));
+// console.log(web3);
+
+
+
+contract.skip('Flight', function (accounts) {
 
   var flight;
   var administrator = accounts[0];
