@@ -14,16 +14,14 @@ contract Flight is Ownable {
     event RefundSent(bytes32 indexed flightId, address indexed owner, uint amount);
     event FlightConcluded(bytes32 indexed flightId, address indexed owner, uint amount);
 
-    event Dump(bytes32 debugString, uint debugInteger);
+    address public _regulator;
 
-    address public regulator;
+    uint public _seatCount;
+    uint public _seatsRemaining;
+    uint public _seatPurchaseIndex = 0;
+    uint public _seatPrice;
 
-    uint public seatCount;
-    uint public seatsRemaining;
-    uint public seatPurchaseIndex = 0;
-    uint public seatPrice;
-
-    bytes32 public flightId;
+    bytes32 public _flightId;
 
     struct Seat {
         bytes32 uuid;
@@ -37,83 +35,79 @@ contract Flight is Ownable {
         uint price;
     }
 
-    mapping(address => uint[]) public ownerSeats;
-    mapping(bytes32 => uint) public seatIndexFromUuid;
-    mapping(address => uint) public passengerSeat;
-    Seat[] public seats;
+    mapping(address => uint[]) public _ownerSeats;
+    mapping(bytes32 => uint) public _seatIndexFromUuid;
+    mapping(address => uint) public _passengerSeat;
+    Seat[] public _seats;
 
-    uint[] private skippedSeats;
+    uint[] private _skippedSeats;
 
     enum FlightStatus { Presale, Sale, Closed, Landed, Finalised, Cancelled }
-    FlightStatus status;
+    FlightStatus _status;
 
     constructor() public {
-        status = FlightStatus.Presale;
+        _status = FlightStatus.Presale;
     }
 
-    function addRegulator(address _regulator) public onlyOwner {
-        regulator = _regulator;
+    function addRegulator(address regulator) public onlyOwner {
+        _regulator = regulator;
     }
 
-    function setSeatPrice(uint _seatPrice) public onlyOwner {
-        seatPrice = _seatPrice;
+    function setSeatPrice(uint seatPrice) public onlyOwner {
+        _seatPrice = seatPrice;
     }
 
     function enableFlight() public onlyOwner {
-        require(seatCount > 0, "Flight must have seats");
-        require(regulator != 0, "Flight must have a regulator");
-        require(flightId != "", "Flight must have an ID");
-        status = FlightStatus.Sale;
-        emit FlightEnabled(flightId);
+        require(_seatCount > 0, "Flight must have seats");
+        require(_regulator != 0, "Flight must have a regulator");
+        require(_flightId != "", "Flight must have an ID");
+        _status = FlightStatus.Sale;
+        emit FlightEnabled(_flightId);
     }
 
     function getOwnerSeat(uint _index) public view hasTicket returns(uint) {
-        return ownerSeats[msg.sender][_index];
+        return _ownerSeats[msg.sender][_index];
     }
 
     function getOwnerSeats() public view hasTicket returns(uint[]) {
-        return ownerSeats[msg.sender];
+        return _ownerSeats[msg.sender];
     }
 
     function transferSeat(uint _seatIndex, address _transferTo) public hasTicket {
-        require(seats[_seatIndex].owner == msg.sender, "You are not the owner of this seat");
-        seats[_seatIndex].passenger = _transferTo;
-        passengerSeat[_transferTo] = _seatIndex;
+        require(_seats[_seatIndex].owner == msg.sender, "You are not the owner of this seat");
+        _seats[_seatIndex].passenger = _transferTo;
+        _passengerSeat[_transferTo] = _seatIndex;
 
-        emit SeatTransferred(flightId, msg.sender, seats[_seatIndex].uuid);
+        emit SeatTransferred(_flightId, msg.sender, _seats[_seatIndex].uuid);
     }
 
     function closeFlight() public onlyOwner onlySale {
-        status = FlightStatus.Closed;
+        _status = FlightStatus.Closed;
     }
 
     function landFlight() public onlyOwner onlyClosed {
-        status = FlightStatus.Landed;
-        emit FlightLanded(flightId);
+        _status = FlightStatus.Landed;
+        emit FlightLanded(_flightId);
     }
 
     function finaliseFlight() public onlyOwner onlyLanded {
-        status = FlightStatus.Finalised;
+        _status = FlightStatus.Finalised;
     }
 
     function cancelFlight() public onlyOwner onlyFinalised {
-        status = FlightStatus.Cancelled;
+        _status = FlightStatus.Cancelled;
     }
 
-    function getStatus() public view returns(FlightStatus) {
-        return status;
+    function setFlightId(bytes32 flightId) public onlyOwner {
+        _flightId = flightId;
     }
 
-    function setFlightId(bytes32 _flightId) public onlyOwner {
-        flightId = _flightId;
+    function setSeatCount(uint seatCount) public onlyOwner {
+        _seatCount = seatCount;
     }
 
-    function setSeatCount(uint _seatCount) public onlyOwner {
-        seatCount = _seatCount;
-    }
-
-    function setRemainingSeats(uint _seatsRemaining) public onlyOwner {
-        seatsRemaining = _seatsRemaining;
+    function setRemainingSeats(uint seatsRemaining) public onlyOwner {
+        _seatsRemaining = seatsRemaining;
     }
 
     /**
@@ -123,131 +117,131 @@ contract Flight is Ownable {
     function book(uint numberOfSeats) public payable onlySale {
         require(msg.value > 0, "Price must be greater than zero");
         require(numberOfSeats > 0, "Number of seats cannot be zero");
-        require(msg.value == seatPrice * numberOfSeats, "Value must be the number of seats multiplied by the current price");
-        require(numberOfSeats <= seatsRemaining, "There are not enough seats to make this booking");
+        require(msg.value == _seatPrice * numberOfSeats, "Value must be the number of seats multiplied by the current price");
+        require(numberOfSeats <= _seatsRemaining, "There are not enough seats to make this booking");
 
-        if (numberOfSeats == 1 && skippedSeats.length == 0) {
+        if (numberOfSeats == 1 && _skippedSeats.length == 0) {
             bookOneSeat();
         } else if (numberOfSeats > 1) {
             bookMultipleSeats(numberOfSeats);
-        } else if (numberOfSeats == 1 && skippedSeats.length > 0) {
+        } else if (numberOfSeats == 1 && _skippedSeats.length > 0) {
             bookSkippedSeat();
         }
     }
 
-    function loadSeat(bytes32 _uuid) public returns(uint) {
-        seats.push(Seat(_uuid, address(0), address(0), 0));
-        seatIndexFromUuid[_uuid] = seats.length-1;
-        return seats.length-1;
+    function loadSeat(bytes32 uuid) public returns(uint) {
+        _seats.push(Seat(uuid, address(0), address(0), 0));
+        _seatIndexFromUuid[uuid] = _seats.length-1;
+        return _seats.length-1;
     }
 
-    function getSeatByIndex(uint _index)
+    function getSeatByIndex(uint index)
         public
         view
         returns(uint, bytes32, address, address, uint)
     {
-        Seat storage searchSeat = seats[_index];
-        return (_index, searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
+        Seat storage searchSeat = _seats[index];
+        return (index, searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
     }
 
-    function getSeatByUuid(bytes32 _uuid)
+    function getSeatByUuid(bytes32 uuid)
         public
         view
         returns(uint, bytes32, address, address, uint)
     {
-        Seat storage searchSeat = seats[seatIndexFromUuid[_uuid]];
-        return (seatIndexFromUuid[_uuid], _uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
+        Seat storage searchSeat = _seats[_seatIndexFromUuid[uuid]];
+        return (_seatIndexFromUuid[uuid], uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
     }
 
     function getPassengerSeat() public view returns(uint, bytes32, address, address, uint) {
-        Seat storage searchSeat = seats[passengerSeat[msg.sender]];
-        return (passengerSeat[msg.sender], searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
+        Seat storage searchSeat = _seats[_passengerSeat[msg.sender]];
+        return (_passengerSeat[msg.sender], searchSeat.uuid, searchSeat.owner, searchSeat.passenger, searchSeat.price);
     }
 
     function bookOneSeat() private {
-        ownerSeats[msg.sender].push(seatPurchaseIndex);
-        passengerSeat[msg.sender] = seatPurchaseIndex;
+        _ownerSeats[msg.sender].push(_seatPurchaseIndex);
+        _passengerSeat[msg.sender] = _seatPurchaseIndex;
 
-        seats[seatPurchaseIndex].owner = msg.sender;
-        seats[seatPurchaseIndex].passenger = msg.sender;
-        seats[seatPurchaseIndex].price = seatPrice;
+        _seats[_seatPurchaseIndex].owner = msg.sender;
+        _seats[_seatPurchaseIndex].passenger = msg.sender;
+        _seats[_seatPurchaseIndex].price = _seatPrice;
 
-        emit SeatBooked(flightId, seats[seatPurchaseIndex].owner, seats[seatPurchaseIndex].uuid);
+        emit SeatBooked(_flightId, _seats[_seatPurchaseIndex].owner, _seats[_seatPurchaseIndex].uuid);
 
-        seatPurchaseIndex++;
-        seatsRemaining--;
+        _seatPurchaseIndex++;
+        _seatsRemaining--;
     }
 
     function bookSkippedSeat() private {
 
-        uint skippedSeatIndex = skippedSeats[skippedSeats.length-1];
-        delete skippedSeats[skippedSeats.length-1];
-        skippedSeats.length--;
+        uint skippedSeatIndex = _skippedSeats[_skippedSeats.length-1];
+        delete _skippedSeats[_skippedSeats.length-1];
+        _skippedSeats.length--;
 
-        seatsRemaining--;
+        _seatsRemaining--;
 
-        ownerSeats[msg.sender].push(skippedSeatIndex);
-        passengerSeat[msg.sender] = skippedSeatIndex;
+        _ownerSeats[msg.sender].push(skippedSeatIndex);
+        _passengerSeat[msg.sender] = skippedSeatIndex;
 
-        seats[skippedSeatIndex].owner = msg.sender;
-        seats[skippedSeatIndex].passenger = msg.sender;
-        seats[skippedSeatIndex].price = seatPrice;
+        _seats[skippedSeatIndex].owner = msg.sender;
+        _seats[skippedSeatIndex].passenger = msg.sender;
+        _seats[skippedSeatIndex].price = _seatPrice;
 
-        emit SeatBooked(flightId, seats[skippedSeatIndex].owner, seats[skippedSeatIndex].uuid);
+        emit SeatBooked(_flightId, _seats[skippedSeatIndex].owner, _seats[skippedSeatIndex].uuid);
     }
 
-    function cancelSeat(uint _seatIndex) public {
-        require(seats[_seatIndex].owner == msg.sender, "This seat does not belong to this user");
+    function cancelSeat(uint seatIndex) public {
+        require(_seats[seatIndex].owner == msg.sender, "This seat does not belong to this user");
 
-        if (seats[_seatIndex].passenger == msg.sender) {
-            delete passengerSeat[msg.sender];
+        if (_seats[seatIndex].passenger == msg.sender) {
+            delete _passengerSeat[msg.sender];
         }
 
-        for (uint i = 0; i < ownerSeats[msg.sender].length-1; i++) {
-            if (_seatIndex == ownerSeats[msg.sender][i]) {
-                delete ownerSeats[msg.sender][i];
-                ownerSeats[msg.sender][i] = ownerSeats[msg.sender][ownerSeats[msg.sender].length-1];
+        for (uint i = 0; i < _ownerSeats[msg.sender].length-1; i++) {
+            if (seatIndex == _ownerSeats[msg.sender][i]) {
+                delete _ownerSeats[msg.sender][i];
+                _ownerSeats[msg.sender][i] = _ownerSeats[msg.sender][_ownerSeats[msg.sender].length-1];
             }
         }
 
-        ownerSeats[msg.sender].length--;
-        skippedSeats.push(_seatIndex);
+        _ownerSeats[msg.sender].length--;
+        _skippedSeats.push(seatIndex);
 
-        msg.sender.transfer(seats[_seatIndex].price);
+        msg.sender.transfer(_seats[seatIndex].price);
 
-        seats[_seatIndex].owner = address(0);
-        seats[_seatIndex].passenger = address(0);
-        seats[_seatIndex].price = 0;
+        _seats[seatIndex].owner = address(0);
+        _seats[seatIndex].passenger = address(0);
+        _seats[seatIndex].price = 0;
 
-        seatsRemaining++;
+        _seatsRemaining++;
 
-        emit SeatCancelled(flightId, seats[_seatIndex].uuid);
+        emit SeatCancelled(_flightId, _seats[seatIndex].uuid);
     }
 
-    function bookMultipleSeats(uint _numberOfSeats) private {
-        for (uint i; i < _numberOfSeats; i++) {
+    function bookMultipleSeats(uint numberOfSeats) private {
+        for (uint i; i < numberOfSeats; i++) {
             bookOneSeat();
         }
     }
 
     function getSkippedSeatCount() public view returns(uint) {
-        return skippedSeats.length;
+        return _skippedSeats.length;
     }
 
     function requestRefund() public hasTicket onlyCancelled {
         uint totalRefund = 0;
-        for(uint i; i < ownerSeats[msg.sender].length; i++){
-            totalRefund += ownerSeats[msg.sender][i];
-            delete ownerSeats[msg.sender][i];
+        for(uint i; i < _ownerSeats[msg.sender].length; i++){
+            totalRefund += _ownerSeats[msg.sender][i];
+            delete _ownerSeats[msg.sender][i];
         }
-        ownerSeats[msg.sender].length = 0;
+        _ownerSeats[msg.sender].length = 0;
 
-        emit RefundSent(flightId, msg.sender, totalRefund);
+        emit RefundSent(_flightId, msg.sender, totalRefund);
         msg.sender.transfer(totalRefund);
     }
 
     function concludeFlight() public onlyOwner {
-        emit FlightConcluded(flightId, owner(), address(this).balance);
+        emit FlightConcluded(_flightId, owner(), address(this).balance);
         selfdestruct(owner());
     }
 
@@ -256,42 +250,42 @@ contract Flight is Ownable {
      */
 
     modifier onlyRegulator(){
-        require(msg.sender == regulator, "Sender must be a regulator");
+        require(msg.sender == _regulator, "Sender must be a regulator");
         _;
     }
 
     modifier onlyPresale(){
-        require(status == FlightStatus.Presale, "Flight must be in Presale status");
+        require(_status == FlightStatus.Presale, "Flight must be in Presale status");
         _;
     }
 
     modifier onlySale(){
-        require(status == FlightStatus.Sale, "Flight must be in Sale status");
+        require(_status == FlightStatus.Sale, "Flight must be in Sale status");
         _;
     }
 
     modifier onlyClosed(){
-        require(status == FlightStatus.Closed, "Flight must be in Closed status");
+        require(_status == FlightStatus.Closed, "Flight must be in Closed status");
         _;
     }
 
     modifier onlyLanded(){
-        require(status == FlightStatus.Landed, "Flight must be in Landed status");
+        require(_status == FlightStatus.Landed, "Flight must be in Landed status");
         _;
     }
 
     modifier onlyFinalised(){
-        require(status == FlightStatus.Finalised, "Flight must be in Finalised status");
+        require(_status == FlightStatus.Finalised, "Flight must be in Finalised status");
         _;
     }
 
     modifier onlyCancelled(){
-        require(status == FlightStatus.Cancelled, "Flight must be in Cancelled status");
+        require(_status == FlightStatus.Cancelled, "Flight must be in Cancelled status");
         _;
     }
 
     modifier hasTicket(){
-        require(ownerSeats[msg.sender].length > 0, "Sender must have seats on this flight");
+        require(_ownerSeats[msg.sender].length > 0, "Sender must have seats on this flight");
         _;
     }
 }
