@@ -30,23 +30,20 @@ contract Flight is Ownable {
         uint price;
     }
 
-    struct Rarity {
-        address starter;
-        uint price;
-    }
-
     mapping(address => uint[]) public _ownerSeats;
     mapping(bytes32 => uint) public _seatIndexFromUuid;
     mapping(address => uint) public _passengerSeat;
+
     Seat[] public _seats;
 
     uint[] private _skippedSeats;
 
     enum FlightStatus { Presale, Sale, Closed, Landed, Finalised, Cancelled }
-    FlightStatus _status;
+    FlightStatus public _status;
 
-    constructor() public {
+    constructor(bytes32 flightId) public {
         _status = FlightStatus.Presale;
+        _flightId = flightId;
     }
 
     function addRegulator(address regulator) public onlyOwner {
@@ -65,12 +62,30 @@ contract Flight is Ownable {
         emit FlightEnabled(_flightId);
     }
 
-    function getOwnerSeat(uint _index) public view hasTicket returns(uint) {
-        return _ownerSeats[msg.sender][_index];
-    }
+    // function getOwnerSeats() public view hasTicket returns(uint[]) {
+    //     return _ownerSeats[msg.sender];
 
-    function getOwnerSeats() public view hasTicket returns(uint[]) {
-        return _ownerSeats[msg.sender];
+        
+    // }
+
+    function getOwnerSeats() public view returns (
+        bytes32[] uuid,
+        address[] owner,
+        address[] passenger,
+        uint256[] price
+    ) {        
+        uuid = new bytes32[](_ownerSeats[msg.sender].length);
+        owner = new address[](_ownerSeats[msg.sender].length);
+        passenger = new address[](_ownerSeats[msg.sender].length);
+        price = new uint256[](_ownerSeats[msg.sender].length);
+
+        for(uint256 i = 0; i < _ownerSeats[msg.sender].length; i++) {
+            Seat memory currentSeat = _seats[_ownerSeats[msg.sender][i]];
+            uuid[i] = currentSeat.uuid;
+            owner[i] = currentSeat.owner;
+            passenger[i] = currentSeat.passenger;
+            price[i] = currentSeat.price;
+        }
     }
 
     function transferSeat(uint _seatIndex, address _transferTo) public hasTicket {

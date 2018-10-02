@@ -5,7 +5,7 @@ module.exports = class ContractWrapper {
 
     //console.log(Object.keys(cont));
 
-    console.log(cont._properties);
+    //console.log(cont._properties);
 
     // this.web3Instance = web3.utils.Contract(abi, address);
     // this.structs = this.buildStructs(abi);

@@ -9,6 +9,15 @@ let flightContract = new ContractWrapper(Flight);
 
 //let flightContract = new ContractWrapper(Flight);
 
+let AssembleStruct = require('./helpers/AssembleStruct');
+
+const structDefinition = [
+  {name: 'offerType', type: 'uint256'},
+  {name: 'owner', type: 'address'},
+  {name: 'price', type: 'uint256'},
+  {name: 'quantity', type: 'uint256'}
+];
+
 
 let debugEvents = new DebugEvents(Flight);
 
@@ -17,7 +26,7 @@ let debugEvents = new DebugEvents(Flight);
 
 
 
-contract.skip('Flight', function (accounts) {
+contract('Flight', function (accounts) {
 
   var flight;
   var administrator = accounts[0];
@@ -43,7 +52,7 @@ contract.skip('Flight', function (accounts) {
   const NUMBER_OF_SEATS = 2;
 
   beforeEach(async function () {
-    return Flight.new()
+    return Flight.new(web3.utils.utf8ToHex("DJ123"))
       .then(function (instance) {
         flight = instance;
         setup = new SetupHelper(flight, accounts);
@@ -60,7 +69,7 @@ contract.skip('Flight', function (accounts) {
     let newSeatCount = 200;
     await flight.setSeatCount(newSeatCount);
     await flight.setRemainingSeats(newSeatCount);
-    let seatCount = await flight.seatCount();
+    let seatCount = await flight._seatCount();
     assert.equal(newSeatCount, seatCount, 'Seat count is not being correcly set');
   });
 
@@ -79,13 +88,13 @@ contract.skip('Flight', function (accounts) {
   });
 
   it('should not have a regulator', async function () {
-    let defaultRegulator = await flight.regulator();
+    let defaultRegulator = await flight._regulator();
     assert.equal(0, defaultRegulator, 'Regulator must not be set by default');
   });
 
   it('should allow a regulator to be added', async function () {
     await flight.addRegulator(regulator);
-    let newRegulator = await flight.regulator();
+    let newRegulator = await flight._regulator();
     assert.equal(regulator, newRegulator, 'Regulator must be settable by admin');
   });
 
@@ -97,7 +106,7 @@ contract.skip('Flight', function (accounts) {
   it('should allow an admin to set the price', async function () {
     const newPrice = 6;
     await flight.setSeatPrice(newPrice);
-    const seatPrice = await flight.seatPrice();
+    const seatPrice = await flight._seatPrice();
 
     assert.equal(seatPrice, newPrice, 'Seat price is not being correcly set');
   });
@@ -135,7 +144,7 @@ contract.skip('Flight', function (accounts) {
     await setup.fullSetup();
     await flight.enableFlight();
 
-    let status = await flight.getStatus();
+    let status = await flight._status();
 
     assert.equal(status, STATUS_SALE, 'Flight should be available for sale');
   });
@@ -173,7 +182,7 @@ contract.skip('Flight', function (accounts) {
   });
 
 
-  it('should allow the purchase of a seat', async () => {
+  it.only('should allow the purchase of a seat', async () => {
     await setup.saleSetup();
 
     await flight.book(NUMBER_OF_SEATS, { from: customer, value: SEAT_PRICE * NUMBER_OF_SEATS });
@@ -181,6 +190,9 @@ contract.skip('Flight', function (accounts) {
     let event = debugEvents.setTx(tx).getEvent('SeatBooked');
 
     let [index, uuid, owner, passenger, price] = Object.values(await flight.getSeatByUuid(web3.utils.asciiToHex(event.uuid)));
+
+    const ownerSeats = await flight.getOwnerSeats({ from: customer });
+    console.log(ownerSeats);
 
     assert.equal(debugEvents.cleanString(uuid), 'fc4f2cfa', 'ticket is from the wrong index');
     assert.equal(owner, customer2, 'owner address should be ' + customer2);
@@ -258,6 +270,7 @@ contract.skip('Flight', function (accounts) {
     const tx = await flight.book(numberOfSeats, { from: customer, value: SEAT_PRICE * numberOfSeats });
     const events = debugEvents.setTx(tx).getEvents('SeatBooked');
     const ownerSeats = await flight.getOwnerSeats({ from: customer });
+
     assert.equal(events.length, numberOfSeats, `Seat Booking event did not fire ${numberOfSeats} times`);
     assert.equal(ownerSeats.length, numberOfSeats, `CustomerSeats array does not contain ${numberOfSeats} elements`);
     assert.equal(debugEvents.cleanUint(ownerSeats[0]), 2, 'Index of purchased seat should be 2');
@@ -305,7 +318,7 @@ contract.skip('Flight', function (accounts) {
     }
   });
 
-  it('must allow an owner passenger to get their seat details', async function () {
+  it.skip('must allow an owner passenger to get their seat details', async function () {
     await setup.saleSetup();
     await flight.book(1, { from: customer, value: SEAT_PRICE });
 
@@ -317,7 +330,7 @@ contract.skip('Flight', function (accounts) {
     assert.equal(price, 5, `Price should be ${SEAT_PRICE}`);
   });
 
-  it('must allow a non-owner passenger to get their seat details', async function () {
+  it.skip('must allow a non-owner passenger to get their seat details', async function () {
     await setup.saleSetup();
     await flight.book(2, { from: customer, value: SEAT_PRICE * 2 });
     const ownerSeats = await flight.getOwnerSeats({ from: customer });
@@ -338,7 +351,7 @@ contract.skip('Flight', function (accounts) {
     await setup.saleSetup();
     await flight.closeFlight();
     await flight.landFlight();
-    const status = await flight.getStatus();
+    const status = await flight._status();
     assert.equal(status, 3, 'Status is not Landed');
   });
 
