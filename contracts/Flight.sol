@@ -1,8 +1,6 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
-import "./Ownable.sol";
-
-contract Flight is Ownable {
+contract Flight {
 
     event TicketPurchased(address indexed purchaser);
     event FlightEnabled(bytes32 indexed flightId);
@@ -15,6 +13,7 @@ contract Flight is Ownable {
     event FlightConcluded(bytes32 indexed flightId, address indexed owner, uint amount);
 
     address public _regulator;
+    address public _owner;
 
     uint public _seatCount;
     uint public _seatsRemaining;
@@ -44,49 +43,53 @@ contract Flight is Ownable {
     constructor(bytes32 flightId) public {
         _status = FlightStatus.Presale;
         _flightId = flightId;
+        _owner = msg.sender;
     }
 
-    function addRegulator(address regulator) public onlyOwner {
+    function addRegulator(address regulator) public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _regulator = regulator;
     }
 
-    function setSeatPrice(uint seatPrice) public onlyOwner {
+    function setSeatPrice(uint seatPrice) public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _seatPrice = seatPrice;
     }
 
-    function enableFlight() public onlyOwner {
+    function enableFlight() public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         require(_seatCount > 0, "Flight must have seats");
         require(_regulator != 0, "Flight must have a regulator");
-        require(_flightId != "", "Flight must have an ID");
+        // require(_flightId != "", "Flight must have an ID");
         _status = FlightStatus.Sale;
-        emit FlightEnabled(_flightId);
+        //emit FlightEnabled(_flightId);
     }
 
     // function getOwnerSeats() public view hasTicket returns(uint[]) {
     //     return _ownerSeats[msg.sender];
 
-        
+
     // }
 
-    function getOwnerSeats() public view returns (
-        bytes32[] uuid,
-        address[] owner,
-        address[] passenger,
-        uint256[] price
-    ) {        
-        uuid = new bytes32[](_ownerSeats[msg.sender].length);
-        owner = new address[](_ownerSeats[msg.sender].length);
-        passenger = new address[](_ownerSeats[msg.sender].length);
-        price = new uint256[](_ownerSeats[msg.sender].length);
+    // function getOwnerSeats() public view returns (
+    //     bytes32[] uuid,
+    //     address[] owner,
+    //     address[] passenger,
+    //     uint256[] price
+    // ) {
+    //     uuid = new bytes32[](_ownerSeats[msg.sender].length);
+    //     owner = new address[](_ownerSeats[msg.sender].length);
+    //     passenger = new address[](_ownerSeats[msg.sender].length);
+    //     price = new uint256[](_ownerSeats[msg.sender].length);
 
-        for(uint256 i = 0; i < _ownerSeats[msg.sender].length; i++) {
-            Seat memory currentSeat = _seats[_ownerSeats[msg.sender][i]];
-            uuid[i] = currentSeat.uuid;
-            owner[i] = currentSeat.owner;
-            passenger[i] = currentSeat.passenger;
-            price[i] = currentSeat.price;
-        }
-    }
+    //     for(uint256 i = 0; i < _ownerSeats[msg.sender].length; i++) {
+    //         Seat memory currentSeat = _seats[_ownerSeats[msg.sender][i]];
+    //         uuid[i] = currentSeat.uuid;
+    //         owner[i] = currentSeat.owner;
+    //         passenger[i] = currentSeat.passenger;
+    //         price[i] = currentSeat.price;
+    //     }
+    // }
 
     function transferSeat(uint _seatIndex, address _transferTo) public hasTicket {
         require(_seats[_seatIndex].owner == msg.sender, "You are not the owner of this seat");
@@ -96,32 +99,39 @@ contract Flight is Ownable {
         emit SeatTransferred(_flightId, msg.sender, _seats[_seatIndex].uuid);
     }
 
-    function closeFlight() public onlyOwner onlySale {
+    function closeFlight() public onlySale {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _status = FlightStatus.Closed;
     }
 
-    function landFlight() public onlyOwner onlyClosed {
+    function landFlight() public onlyClosed {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _status = FlightStatus.Landed;
         emit FlightLanded(_flightId);
     }
 
-    function finaliseFlight() public onlyOwner onlyLanded {
+    function finaliseFlight() public onlyLanded {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _status = FlightStatus.Finalised;
     }
 
-    function cancelFlight() public onlyOwner onlyFinalised {
+    function cancelFlight() public onlyFinalised {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _status = FlightStatus.Cancelled;
     }
 
-    function setFlightId(bytes32 flightId) public onlyOwner {
+    function setFlightId(bytes32 flightId) public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _flightId = flightId;
     }
 
-    function setSeatCount(uint seatCount) public onlyOwner {
+    function setSeatCount(uint seatCount) public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _seatCount = seatCount;
     }
 
-    function setRemainingSeats(uint seatsRemaining) public onlyOwner {
+    function setRemainingSeats(uint seatsRemaining) public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
         _seatsRemaining = seatsRemaining;
     }
 
@@ -138,10 +148,16 @@ contract Flight is Ownable {
         if (numberOfSeats == 1 && _skippedSeats.length == 0) {
             bookOneSeat();
         } else if (numberOfSeats > 1) {
-            bookMultipleSeats(numberOfSeats);
+            //bookMultipleSeats(numberOfSeats);
+            bookOneSeat();
         } else if (numberOfSeats == 1 && _skippedSeats.length > 0) {
             bookSkippedSeat();
         }
+    }
+
+    function bookGarbage() public view returns(bytes32) {
+        //_seats[1].owner = 0x7f90656Cde73A907f66cbfE44cBB88B57B00cE23;
+        return _seats[3].uuid;
     }
 
     function loadSeat(bytes32 uuid) public returns(uint) {
@@ -174,17 +190,18 @@ contract Flight is Ownable {
     }
 
     function bookOneSeat() private {
-        _ownerSeats[msg.sender].push(_seatPurchaseIndex);
-        _passengerSeat[msg.sender] = _seatPurchaseIndex;
+        _ownerSeats[msg.sender].push(_seatPurchaseIndex);    // 20,000
+        _passengerSeat[msg.sender] = _seatPurchaseIndex;     // 20,000
 
-        _seats[_seatPurchaseIndex].owner = msg.sender;
-        _seats[_seatPurchaseIndex].passenger = msg.sender;
-        _seats[_seatPurchaseIndex].price = _seatPrice;
+        // _seats[_seatPurchaseIndex].owner = msg.sender;    // 20,000
+        // _seats[_seatPurchaseIndex].passenger = msg.sender;// 20,000
+        // _seats[_seatPurchaseIndex].price = _seatPrice;    // 20,000
 
         emit SeatBooked(_flightId, _seats[_seatPurchaseIndex].owner, _seats[_seatPurchaseIndex].uuid);
 
-        _seatPurchaseIndex++;
-        _seatsRemaining--;
+        _seatPurchaseIndex++; // 3 + 20,000
+        _seatsRemaining--; // 3 + 20,000
+        // gas limit = 3000000
     }
 
     function bookSkippedSeat() private {
@@ -255,9 +272,10 @@ contract Flight is Ownable {
         msg.sender.transfer(totalRefund);
     }
 
-    function concludeFlight() public onlyOwner {
-        emit FlightConcluded(_flightId, owner(), address(this).balance);
-        selfdestruct(owner());
+    function concludeFlight() public {
+        require(msg.sender == _owner, "Only the owner may perform this action");
+        emit FlightConcluded(_flightId, _owner, address(this).balance);
+        selfdestruct(_owner);
     }
 
     /**

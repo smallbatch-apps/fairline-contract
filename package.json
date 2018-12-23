@@ -9,10 +9,14 @@
   },
   "dependencies": {
     "contract-events": "^1.0.1n",
+    "core-js": "^2.5.7",
     "lk-test-helpers": "^0.1.4",
+    "web3": "^1.0.0-beta.36",
     "zeppelin-solidity": "^1.9.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@babel/polyfill": "^7.0.0"
+  },
   "scripts": {
     "test": "truffle test"
   },
